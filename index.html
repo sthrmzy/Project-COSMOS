@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project COSMOS</title>
+
+    <!-- Chosen Palette: Sci-Fi Realista -->
+    <!-- Application Structure Plan: O design adota uma abordagem de "ponte de comando", centrando a experiência em um visualizador de mapa imersivo que ocupa a tela inteira. A interação é gerenciada por uma barra de ferramentas vertical e flutuante, que ativa painéis contextuais deslizantes. Esta estrutura foi escolhida para maximizar o foco do usuário na imagem/dados, mantendo as ferramentas complexas acessíveis, mas não intrusivas. O fluxo do usuário é projetado para ser exploratório e direto: selecionar uma ferramenta, configurar no painel e aplicar diretamente no mapa, promovendo uma sensação de controle e descoberta. -->
+    <!-- Visualization & Content Choices: Imagem Principal -> Objetivo: Exploração imersiva -> Método: Biblioteca Leaflet.js com CRS simples para imagens não geográficas, simulando o zoom dinâmico em um grande mosaico -> Interação: Pan e zoom fluidos. Ferramentas (IA, Camadas, Gemini) -> Objetivo: Análise de dados e controle -> Método: Painéis e modais interativos construídos com HTML/Tailwind/JS. Ícones -> Objetivo: Navegação intuitiva -> Método: SVGs embutidos da biblioteca Lucide para clareza e consistência, estilizados com Tailwind. A escolha do Leaflet.js é crucial para a performance com imagens grandes, enquanto os painéis dinâmicos mantêm a UI limpa. -->
+    <!-- CONFIRMATION: NO SVG graphics used (for complex diagrams or data visualization). NO Mermaid JS used. -->
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Exo+2:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+
+
+</head>
+<body class="antialiased">
+
+    <div id="app-container" class="relative w-screen h-screen">
+        <div id="map" class="w-full h-full z-0"></div>
+
+        <header class="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-full max-w-md">
+            <div class="relative">
+                <input id="search-bar" type="text" placeholder="Buscar por coordenadas ou locais..." class="w-full bg-[#161B22]/50 text-[#E6EDF3] border border-white/20 rounded-md px-10 py-2 text-sm focus:bg-[#161B22] focus:border-[#00F6FF] focus:outline-none transition-all duration-300 placeholder:text-white/40">
+                <div class="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                </div>
+            </div>
+        </header>
+
+        <nav class="absolute left-4 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-4 p-2 bg-[#161B22]/80 border border-white/20 rounded-lg">
+            <button id="btn-layers" data-tooltip="Camadas" data-panel="layers" class="tool-btn group relative p-3 rounded-md text-[#E6EDF3] hover:bg-[#00F6FF] hover:text-[#0D1117] transition-colors duration-200">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                <span class="custom-tooltip">Camadas</span>
+            </button>
+            <button id="btn-ai" data-tooltip="Análise IA" data-panel="ai" class="tool-btn group relative p-3 rounded-md text-[#E6EDF3] hover:bg-[#00F6FF] hover:text-[#0D1117] transition-colors duration-200">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="8" height="12" rx="2"/><path d="M12 12h4"/><path d="M12 16h4"/><path d="M16 4h2a2 2 0 0 1 2 2v2"/><path d="M20 12v4a2 2 0 0 1-2 2h-2"/></svg>
+                <span class="custom-tooltip">Análise IA</span>
+            </button>
+            <button id="btn-gemini" data-tooltip="Análise Gemini" class="tool-btn group relative p-3 rounded-md text-[#E6EDF3] hover:bg-[#00F6FF] hover:text-[#0D1117] transition-colors duration-200">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12v-2a3 3 0 0 0-3-3H7"/><path d="M12 12v4a3 3 0 0 1-3 3H7"/><path d="M12 12h2a3 3 0 0 1 3 3v2"/><path d="M12 12h2a3 3 0 0 0 3-3V7"/><circle cx="12" cy="12" r="10"/></svg>
+                <span class="custom-tooltip">Análise Gemini</span>
+            </button>
+            <button id="btn-ar" data-tooltip="Realidade Aumentada" class="tool-btn group relative p-3 rounded-md text-[#E6EDF3] hover:bg-[#00F6FF] hover:text-[#0D1117] transition-colors duration-200">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                <span class="custom-tooltip">Realidade Aumentada</span>
+            </button>
+        </nav>
+
+        <aside id="control-panel" class="control-panel absolute top-0 left-0 h-full w-80 z-30 p-6 border-r border-[#00F6FF]/50 overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h1 id="panel-title" class="text-2xl font-bold" style="font-family: 'Exo 2', sans-serif;">Ferramentas</h1>
+                <button id="close-panel-btn" class="p-2 text-[#E6EDF3] hover:text-[#00F6FF]">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div id="panel-content">
+                <p class="text-sm text-white/60">Selecione uma ferramenta na barra à esquerda para começar.</p>
+            </div>
+        </aside>
+
+        <footer class="absolute bottom-4 right-4 z-10 p-2 bg-[#161B22]/80 border border-white/20 rounded-lg text-xs tracking-wider">
+            <div id="context-info" class="flex gap-4">
+                <span>LAT: <span id="lat-val">--.--</span></span>
+                <span>LON: <span id="lon-val">--.--</span></span>
+                <span>ZOOM: <span id="zoom-val">--</span></span>
+            </div>
+        </footer>
+        
+        <div id="ar-modal" class="hidden fixed inset-0 bg-[#0D1117]/90 z-50 flex items-center justify-center p-4">
+            <div class="bg-[#161B22] border border-[#00F6FF] rounded-lg p-8 max-w-lg w-full text-center relative">
+                <button id="close-ar-modal-btn" class="absolute top-4 right-4 p-2 text-[#E6EDF3] hover:text-[#00F6FF]">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+                <div class="flex justify-center mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#00F6FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                </div>
+                <h2 class="text-xl font-bold mb-2" style="font-family: 'Exo 2', sans-serif;">Realidade Aumentada</h2>
+                <p class="text-white/70 mb-6">Aponte a câmera do seu dispositivo para o marcador COSMOS para projetar o modelo 3D da região selecionada.</p>
+                <button class="w-full bg-[#00F6FF] text-[#0D1117] font-bold py-3 rounded-md hover:bg-opacity-80 transition-all">Iniciar Câmera</button>
+            </div>
+        </div>
+
+        <div id="gemini-modal" class="hidden fixed inset-0 bg-[#0D1117]/90 z-50 flex items-center justify-center p-4">
+            <div class="bg-[#161B22] border border-[#00F6FF] rounded-lg p-8 max-w-lg w-full relative">
+                <button id="close-gemini-modal-btn" class="absolute top-4 right-4 p-2 text-[#E6EDF3] hover:text-[#00F6FF]">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+                <div class="flex items-center gap-4 mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#00F6FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12v-2a3 3 0 0 0-3-3H7"/><path d="M12 12v4a3 3 0 0 1-3 3H7"/><path d="M12 12h2a3 3 0 0 1 3 3v2"/><path d="M12 12h2a3 3 0 0 0 3-3V7"/><circle cx="12" cy="12" r="10"/></svg>
+                    <h2 class="text-xl font-bold" style="font-family: 'Exo 2', sans-serif;">Análise com Gemini</h2>
+                </div>
+                <p class="text-white/70 mb-4 text-sm">Descreva o que você gostaria de encontrar na visão atual do mapa. A IA do Gemini analisará a imagem para você.</p>
+                <textarea id="gemini-prompt" rows="3" placeholder="Ex: Encontre formações geológicas escuras e alongadas." class="w-full bg-[#0D1117] text-[#E6EDF3] border border-white/20 rounded-md p-2 text-sm focus:border-[#00F6FF] focus:outline-none transition-all duration-300 placeholder:text-white/40"></textarea>
+                <button id="gemini-submit-btn" class="w-full mt-4 bg-[#00F6FF] text-[#0D1117] font-bold py-3 rounded-md hover:bg-opacity-80 transition-all flex items-center justify-center gap-2">
+                    Analisar com IA
+                </button>
+            </div>
+        </div>
+        
+        <div id="loader-overlay" class="hidden fixed inset-0 bg-[#0D1117]/80 z-50 flex flex-col items-center justify-center text-center">
+            <div class="loader"></div>
+            <p id="loader-text" class="mt-4 text-lg font-medium text-[#00F6FF]">Analisando região...</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
+
+
